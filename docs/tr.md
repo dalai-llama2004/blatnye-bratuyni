@@ -144,6 +144,14 @@
 3. Система проверяет доступность следующего слота.
 4. При успехе создаётся новая бронь и отображается подтверждение.
 
+### Сценарий: закрытие зоны на обслуживание (admin)
+
+1. Администратор выбирает зону и инициирует её закрытие на обслуживание.
+2. Указывает причину и временной интервал закрытия.
+3. Система отменяет все будущие бронирования в этой зоне.
+4. Система уведомляет всех затронутых пользователей.
+5. Администратор получает подтверждение операции.
+
 
 ##  Архитектура системы
 
@@ -195,10 +203,6 @@ subgraph Databases
     BookingDB[(Booking DB)]
 end
 
-subgraph Queue
-    MailQ[(Mail/Events Queue)]
-end
-
 WebApp-->|HTTPS|APIGateway
 
 APIGateway-->|HTTP|UserService
@@ -210,8 +214,6 @@ BookingService-->|SQL|BookingDB
 
 BookingService-->|HTTP|UserService
 BookingService-->|HTTP|NotificationService
-
-NotificationService-->|Publish/Consume|MailQ
 ```
 
 ---
@@ -226,8 +228,7 @@ NotificationService-->|Publish/Consume|MailQ
 4. User Service хеширует пароль и сохраняет пользователя в User DB
 5. User Service отправляет код подтверждения на email пользователя
 6. Пользователь вводит код подтверждения, система активирует аккаунт
-7. User Service генерирует JWT токен
-8. API Gateway возвращает токен клиенту
+7. API Gateway возвращает клиенту статус успешной регистрации
 
 ```mermaid
 sequenceDiagram
@@ -247,9 +248,89 @@ UserService->>Client: Отправка кода подтверждения email
 Client->>APIGateway: POST /users/confirm {email, code}
 APIGateway->>UserService: Подтверждение регистрации
 UserService->>UserDB: Активация аккаунта
-UserService->>UserService: Генерация JWT
-UserService-->>APIGateway: Created + JWT
 APIGateway-->>Client: Успешная регистрация
+```
+
+### Сценарий: вход в систему
+
+1. Клиент отправляет в API Gateway запрос POST /users/login с email и паролем.
+2. API Gateway перенаправляет запрос в User Service.
+3. User Service проверяет валидность email и пароля по данным в User DB.
+4. При успешной проверке User Service генерирует JWT токен.
+5. API Gateway возвращает токен клиенту, клиент перенаправляется на главную страницу.
+
+```mermaid
+sequenceDiagram
+participant Client
+participant APIGateway
+participant UserService
+participant UserDB
+Client->>APIGateway: POST /users/login {email, password}
+APIGateway->>UserService: Проверка логина/пароля
+UserService->>UserDB: SELECT * FROM users WHERE email = ?
+UserDB-->>UserService: Данные пользователя
+UserService->>UserService: Проверка пароля
+UserService-->>APIGateway: JWT (успех/ошибка)
+APIGateway-->>Client: Токен или ошибка + редирект
+```
+
+---
+
+### Сценарий: просмотр зон и рабочих мест
+
+1. Клиент отправляет GET /zones через API Gateway.
+2. API Gateway перенаправляет запрос в Booking Service.
+3. Booking Service запрашивает список зон и их статусы из Booking DB.
+4. API Gateway возвращает список зон клиенту.
+5. Клиент отправляет GET /zones/{id}/places для выбранной зоны.
+6. API Gateway перенаправляет запрос в Booking Service.
+7. Booking Service возвращает список рабочих мест по зоне из Booking DB.
+
+```mermaid
+sequenceDiagram
+participant Client
+participant APIGateway
+participant BookingService
+participant BookingDB
+Client->>APIGateway: GET /zones
+APIGateway->>BookingService: Получить список зон
+BookingService->>BookingDB: SELECT * FROM zones
+BookingDB-->>BookingService: Список зон
+BookingService-->>APIGateway: Список зон
+APIGateway-->>Client: Список зон
+
+Client->>APIGateway: GET /zones/{id}/places
+APIGateway->>BookingService: Получить места зоны
+BookingService->>BookingDB: SELECT * FROM places WHERE zone_id={id}
+BookingDB-->>BookingService: Список мест
+BookingService-->>APIGateway: Список мест
+APIGateway-->>Client: Список мест
+```
+
+---
+
+### Сценарий: просмотр доступности слотов
+
+1. Клиент отправляет GET /places/{id}/slots?date=YYYY-MM-DD через API Gateway.
+2. API Gateway перенаправляет запрос в Booking Service.
+3. Booking Service запрашивает слоты по месту и дате из Booking DB.
+4. Booking Service определяет статус каждого слота (свободен/занят).
+5. API Gateway возвращает список слотов с их статусом клиенту.
+
+```mermaid
+sequenceDiagram
+participant Client
+participant APIGateway
+participant BookingService
+participant BookingDB
+Client->>APIGateway: GET /places/{id}/slots?date=YYYY-MM-DD
+APIGateway->>BookingService: Получить слоты места
+BookingService->>BookingDB: SELECT * FROM slots WHERE place_id={id} AND date=?
+BookingDB-->>BookingService: Список слотов
+BookingService->>BookingDB: SELECT * FROM bookings WHERE slot_id IN (...) AND status = 'active'
+BookingDB-->>BookingService: Активные брони
+BookingService-->>APIGateway: Список слотов с их статусом
+APIGateway-->>Client: Список слотов (свободен/занят)
 ```
 
 ---
@@ -400,7 +481,7 @@ APIGateway-->>Admin: Подтверждение
 
 **Требования для MVP:**
 
-- Реализация User Service (регистрация, аутентификация, восстановление пароля)
+- Реализация User Service (регистрация, аутентификация)
 - Реализация Booking Service (просмотр зон, рабочих мест, слотов; создание/отмена/продление/история бронирований; функции администрирования реализуются в Booking Service через проверку ролей)
 - Реализация Notification Service (email, push, внутренняя лента)
 - Интеграция с PostgreSQL (отдельные схемы для пользователей и бронирований)
@@ -411,7 +492,7 @@ APIGateway-->>Admin: Подтверждение
 **План разработки:**
 1. Проектирование API (OpenAPI-спецификация) для всех сервисов
 2. Реализация API Gateway с маршрутизацией и базовой аутентификацией
-3. Реализация User Service (регистрация, логин, восстановление, JWT)
+3. Реализация User Service (регистрация, логин, JWT)
 4. Реализация Booking Service (CRUD зон/мест/слотов, создание/отмена/продление брони, история, все админ-функции)
 5. Реализация Notification Service (email, push, внутренняя лента)
 6. Настройка PostgreSQL, проектирование схемы данных, миграции
@@ -432,9 +513,8 @@ APIGateway-->>Admin: Подтверждение
 - Пользователь может зарегистрироваться, войти, восстановить пароль
 - Можно просматривать зоны, рабочие места, слоты; создавать, отменять, продлевать брони
 - Админ может управлять зонами, местами, закрывать зоны, отправлять массовые уведомления (через Booking Service, роль "admin")
-- Уведомления доставляются пользователям (email, push, внутренняя лента)
+- Уведомления доставляются пользователям (email / push)
 - 80% кода покрыто тестами
-- Фронтенд реализует весь заявленный функционал
 
 ---
 

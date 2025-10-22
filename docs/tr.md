@@ -207,12 +207,10 @@ WebApp-->|HTTPS|APIGateway
 
 APIGateway-->|HTTP|UserService
 APIGateway-->|HTTP|BookingService
-APIGateway-->|HTTP|NotificationService
 
 UserService-->|SQL|UserDB
 BookingService-->|SQL|BookingDB
 
-BookingService-->|HTTP|UserService
 BookingService-->|HTTP|NotificationService
 ```
 

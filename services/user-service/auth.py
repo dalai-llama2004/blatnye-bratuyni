@@ -6,7 +6,7 @@ from config import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password[:72])
+    return pwd_context.hash(password)
 
 def verify_password(password: str, hashed: str) -> bool:
     return pwd_context.verify(password, hashed)

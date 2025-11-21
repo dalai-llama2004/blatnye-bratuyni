@@ -1,5 +1,7 @@
 fastapi
-uvicorn
-sqlalchemy
-python-dotenv
+passlib
 psycopg2-binary
+python-dotenv
+python-jose
+sqlalchemy
+uvicorn

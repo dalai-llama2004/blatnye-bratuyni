@@ -1,0 +1,122 @@
+from datetime import datetime
+from typing import Optional, List
+
+from pydantic import BaseModel, Field
+
+
+# ------------------------------------------------------------
+# Базовый класс для всех выходных схем (включает orm_mode)
+# ------------------------------------------------------------
+class ORMBase(BaseModel):
+    class Config:
+        from_attributes = True  # FastAPI + SQLAlchemy 2.0-friendly
+
+
+# ============================================================
+#                          ZONES
+# ============================================================
+
+class ZoneBase(BaseModel):
+    name: str = Field(..., example="Главный коворкинг")
+    address: Optional[str] = Field(None, example="пр. Гагарина 15")
+    is_active: bool = True
+
+
+class ZoneCreate(ZoneBase):
+    pass
+
+
+class ZoneUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ZoneOut(ORMBase):
+    id: int
+    name: str
+    address: Optional[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# ============================================================
+#                          PLACES
+# ============================================================
+
+class PlaceOut(ORMBase):
+    id: int
+    zone_id: int
+    name: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# ============================================================
+#                          SLOTS
+# ============================================================
+
+class SlotOut(ORMBase):
+    id: int
+    place_id: int
+    start_time: datetime
+    end_time: datetime
+    is_available: bool
+
+
+# ============================================================
+#                        BOOKINGS
+# ============================================================
+
+# ---- CREATE / CANCEL / EXTEND ----
+
+class BookingCreate(BaseModel):
+    """
+    Пользователь создаёт бронь через slot_id.
+    user_id берётся из контекста авторизации:
+      - сейчас: читаем из заголовка X-User-Id (временное решение)
+      - позже: будет браться из JWT от Auth-сервиса
+    """
+    slot_id: int
+
+
+class BookingCancelRequest(BaseModel):
+    booking_id: int
+
+
+class BookingExtendRequest(BaseModel):
+    """
+    По факту тело не обязательно, но оставим
+    на будущее (например, опция "продлить на 2 часа")
+    """
+    pass
+
+
+class BookingHistoryFilters(BaseModel):
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    zone_id: Optional[int] = None
+    status: Optional[str] = None
+
+
+# ---- OUT ----
+
+class BookingOut(ORMBase):
+    id: int
+    user_id: int
+    slot_id: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+# ============================================================
+#                      ADMIN ACTIONS
+# ============================================================
+
+class ZoneCloseRequest(BaseModel):
+    reason: str = Field(..., example="Плановая уборка")
+    from_time: datetime = Field(..., example="2025-02-01T10:00:00")
+    to_time: datetime = Field(..., example="2025-02-01T18:00:00")

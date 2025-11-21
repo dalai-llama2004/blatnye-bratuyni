@@ -1,7 +1,0 @@
-# services/booking-service/requirements.txt
-fastapi
-uvicorn[standard]
-pydantic==1.10.14
-sqlalchemy>=2.0.0
-asyncpg
-python-dotenv

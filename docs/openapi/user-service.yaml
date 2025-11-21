@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: User Service API
+  version: 1.0.0
+  description: |
+    API для управления пользователями: регистрация, подтверждение email, вход, восстановление пароля.
+servers:
+  - url: http://localhost:8000
+paths:
+  /users/register:
+    post:
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterModel'
+      responses:
+        '200':
+          description: Успешная регистрация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Email уже зарегистрирован
+  /users/confirm:
+    post:
+      summary: Подтверждение email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmModel'
+      responses:
+        '200':
+          description: Email подтверждён
+        '400':
+          description: Неверный код
+  /users/login:
+    post:
+      summary: Вход в систему
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginModel'
+      responses:
+        '200':
+          description: JWT токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+        '401':
+          description: Неверные учётные данные
+        '403':
+          description: Email не подтверждён
+  /users/recover:
+    post:
+      summary: Восстановление пароля (отправка кода)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoverModel'
+      responses:
+        '200':
+          description: Код отправлен
+        '404':
+          description: Email не найден
+  /users/reset:
+    post:
+      summary: Сброс пароля
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetModel'
+      responses:
+        '200':
+          description: Пароль успешно изменён
+        '400':
+          description: Неверный код восстановления
+components:
+  schemas:
+    RegisterModel:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+    ConfirmModel:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+    LoginModel:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    RecoverModel:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+    ResetModel:
+      type: object
+      required:
+        - email
+        - code
+        - new_password
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+        new_password:
+          type: string

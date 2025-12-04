@@ -35,3 +35,12 @@ services:
       - "5434:5432"
     volumes:
       - ./pgdata/notification:/var/lib/postgresql/data
+
+  frontend:
+    build: ./services/frontend
+    container_name: coworking-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://host.docker.internal:8000
+    restart: unless-stopped

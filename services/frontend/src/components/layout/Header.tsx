@@ -29,7 +29,7 @@ export default function Header() {
               href="/"
               className="flex items-center text-xl font-bold text-primary-600 hover:text-primary-700"
             >
-              Коворкинг Братюни
+              ПУНККроссинг
             </Link>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {isAuthenticated && (

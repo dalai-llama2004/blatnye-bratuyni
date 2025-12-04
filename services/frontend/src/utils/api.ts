@@ -23,6 +23,8 @@ class ApiClient {
     });
 
     // Handle 401 errors
+    // Note: Using window.location.href instead of Next.js router because
+    // interceptors run outside React component context and don't have access to router
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {

@@ -19,6 +19,8 @@ export default function ZonesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingSlot, setBookingSlot] = useState<number | null>(null);
+  const [bookingError, setBookingError] = useState<string>('');
+  const [bookingSuccess, setBookingSuccess] = useState<string>('');
 
   useEffect(() => {
     loadZones();
@@ -76,17 +78,22 @@ export default function ZonesPage() {
     }
 
     setBookingSlot(slotId);
+    setBookingError('');
+    setBookingSuccess('');
 
     try {
       await bookingService.createBooking({ slot_id: slotId });
-      alert('Бронирование успешно создано!');
+      setBookingSuccess('Бронирование успешно создано!');
       
       // Перезагружаем слоты
       if (selectedPlace) {
         await loadSlots(selectedPlace.id, selectedDate);
       }
+      
+      // Скрыть сообщение через 3 секунды
+      setTimeout(() => setBookingSuccess(''), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Ошибка создания бронирования');
+      setBookingError(err.response?.data?.detail || 'Ошибка создания бронирования');
     } finally {
       setBookingSlot(null);
     }
@@ -110,6 +117,18 @@ export default function ZonesPage() {
         {error && (
           <div className="mb-4 rounded-md bg-red-50 p-4">
             <div className="text-sm text-red-700">{error}</div>
+          </div>
+        )}
+
+        {bookingError && (
+          <div className="mb-4 rounded-md bg-red-50 p-4">
+            <div className="text-sm text-red-700">{bookingError}</div>
+          </div>
+        )}
+
+        {bookingSuccess && (
+          <div className="mb-4 rounded-md bg-green-50 p-4">
+            <div className="text-sm text-green-700">{bookingSuccess}</div>
           </div>
         )}
 

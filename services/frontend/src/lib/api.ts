@@ -34,7 +34,7 @@ api.interceptors.response.use(
       // Токен истек или невалиден
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        // Перенаправление через Next.js router произойдет в компонентах
       }
     }
     return Promise.reject(error);
